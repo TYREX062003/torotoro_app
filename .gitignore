@@ -1,0 +1,33 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+build/
+flutter_export_environment.sh
+
+# Android
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/google-services.json
+
+# iOS/macOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.podspec
+macos/Pods/
+Runner/GeneratedPluginRegistrant.*
+**/Generated.xcconfig
+**/*.mode1v3
+**/*.pbxuser
+**/*.perspectivev3
+
+# Web
+web/.dart_tool/
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
