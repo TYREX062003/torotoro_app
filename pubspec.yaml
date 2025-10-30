@@ -50,6 +50,9 @@ dependencies:
   fl_chart: ^0.69.2
   pdf: ^3.11.1
   printing: ^5.13.4
+  
+  # 🔥 QR Code para web
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

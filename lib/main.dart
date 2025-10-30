@@ -8,12 +8,16 @@ import 'firebase_options.dart';
 // Servicios
 import 'services/locale_service.dart';
 
-// Páginas
+// Páginas móvil
 import 'home/home_page.dart';
 import 'auth/login_page.dart';
 import 'auth/register_page.dart';
 import 'auth/reset_password_page.dart';
 import 'admin/admin_gate.dart';
+
+// 🆕 Páginas web
+import 'webnav/landing_page.dart';
+import 'webnav/web_login_page.dart';
 
 // L10n
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -33,6 +37,7 @@ Future<void> main() async {
   if (kIsWeb) {
     await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
   }
+  
   // Alinear idioma por defecto del backend de auth con la app
   try {
     await FirebaseAuth.instance.setLanguageCode('es');
@@ -86,7 +91,7 @@ class _TorotoroAppState extends State<TorotoroApp> {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
 
-      // ✅ i18n: usar los locales soportados del gen
+      // ✅ i18n
       locale: _localeService.locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -132,18 +137,87 @@ class _TorotoroAppState extends State<TorotoroApp> {
         ),
         dividerTheme: const DividerThemeData(color: Color(0xFFDDD3BE), thickness: 1),
       ),
-      home: const AuthGate(),
+      
+      // 🔥 ROUTING CRÍTICO: Detectar plataforma
+      home: kIsWeb ? const WebGate() : const AuthGate(),
+      
       routes: {
         '/login': (_) => const LoginPage(),
         '/register': (_) => const RegisterPage(),
         '/reset': (_) => const ResetPasswordPage(),
         '/home': (_) => const HomePage(),
         '/admin': (_) => const AdminGate(),
+        // 🆕 Rutas web
+        '/web-login': (_) => const WebLoginPage(),
+        '/web-landing': (_) => const LandingPage(),
       },
     );
   }
 }
 
+// ============================================
+// 🆕 WEB GATE: Decide qué mostrar en web
+// ============================================
+class WebGate extends StatelessWidget {
+  const WebGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: kBeige,
+            body: Center(child: CircularProgressIndicator(color: kOlive)),
+          );
+        }
+        
+        // Si hay usuario autenticado, verificar si es admin
+        if (snap.hasData) {
+          return FutureBuilder<bool>(
+            future: _isAdmin(),
+            builder: (context, adminSnap) {
+              if (adminSnap.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  backgroundColor: kBeige,
+                  body: Center(child: CircularProgressIndicator(color: kOlive)),
+                );
+              }
+              
+              // Si es admin, mostrar panel admin
+              if (adminSnap.data == true) {
+                return const AdminGate();
+              }
+              
+              // Si es usuario normal, mostrar landing con mensaje
+              return const LandingPage(showUserMessage: true);
+            },
+          );
+        }
+        
+        // Si no hay usuario, mostrar landing page
+        return const LandingPage();
+      },
+    );
+  }
+  
+  Future<bool> _isAdmin() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      
+      final token = await user.getIdTokenResult(true);
+      return token.claims?['role'] == 'admin';
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+// ============================================
+// AUTH GATE: Para móvil (sin cambios)
+// ============================================
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
