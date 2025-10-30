@@ -30,6 +30,7 @@ class _MapPageState extends State<MapPage> {
   LatLng? _currentLocation;
   List<LatLng> _routePoints = [];
   bool _isLoadingRoute = false;
+  bool _isLoadingLocation = true; // ✅ NUEVO: Estado de carga
   String? _estimatedTime;
   String? _estimatedDistance;
 
@@ -37,7 +38,7 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _initLocation();
-    _localeService.addListener(_onLocaleChanged); // ✅ Escuchar cambios de idioma
+    _localeService.addListener(_onLocaleChanged);
   }
 
   @override
@@ -48,20 +49,75 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onLocaleChanged() {
-    if (mounted) setState(() {}); // ✅ Actualizar cuando cambia el idioma
+    if (mounted) setState(() {});
   }
 
+  /// ✅ CORREGIDO: Mejor manejo de ubicación inicial
   Future<void> _initLocation() async {
-    final location = await LocationService.getCurrentLocation();
-    if (location != null && mounted) {
-      setState(() => _currentLocation = location);
-    }
+    print('🗺️ Inicializando ubicación...');
+    
+    if (!mounted) return;
+    setState(() => _isLoadingLocation = true);
 
-    LocationService.getLocationStream().listen((location) {
-      if (mounted) {
-        setState(() => _currentLocation = location);
+    try {
+      // Intentar obtener ubicación actual
+      final location = await LocationService.getCurrentLocation();
+      
+      if (location != null && mounted) {
+        setState(() {
+          _currentLocation = location;
+          _isLoadingLocation = false;
+        });
+        print('✅ Ubicación inicial establecida');
+        
+        // Centrar mapa en la ubicación
+        _mapController.move(location, 14);
+      } else {
+        if (mounted) {
+          setState(() => _isLoadingLocation = false);
+          print('⚠️ No se pudo obtener ubicación inicial');
+          
+          // Mostrar mensaje al usuario
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('No se pudo obtener tu ubicación. Verifica los permisos.'),
+              action: SnackBarAction(
+                label: 'Reintentar',
+                onPressed: () => _initLocation(),
+              ),
+              duration: const Duration(seconds: 5),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-    });
+
+      // ✅ Escuchar actualizaciones de ubicación en tiempo real
+      LocationService.getLocationStream().listen(
+        (location) {
+          if (mounted) {
+            setState(() => _currentLocation = location);
+            print('📍 Ubicación actualizada en mapa');
+          }
+        },
+        onError: (error) {
+          print('❌ Error en stream de ubicación: $error');
+        },
+      );
+    } catch (e) {
+      print('❌ Error inicializando ubicación: $e');
+      
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al obtener ubicación: $e'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _goToLocation(LatLng destination) async {
@@ -70,7 +126,10 @@ class _MapPageState extends State<MapPage> {
     if (_currentLocation == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.locationNotAvailable)),
+        SnackBar(
+          content: Text(l10n.locationNotAvailable),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -153,149 +212,184 @@ class _MapPageState extends State<MapPage> {
     final lang = _localeService.simpleLanguageCode;
 
     return Scaffold(
-      // ✅ SIN AppBar - mapa limpio, sin "Inicio" ni "Mapa - Toro Toro"
       body: SafeArea(
         child: Stack(
           children: [
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: poisStream,
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+              stream: poisStream,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              final markers = <Marker>[];
+                final markers = <Marker>[];
 
-              if (snap.hasData && snap.data!.docs.isNotEmpty) {
-                for (final doc in snap.data!.docs) {
-                  final data = doc.data();
-                  try {
-                    final lat = (data['lat'] as num).toDouble();
-                    final lng = (data['lng'] as num).toDouble();
-                    final poiLocation = LatLng(lat, lng);
+                if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                  for (final doc in snap.data!.docs) {
+                    final data = doc.data();
+                    try {
+                      final lat = (data['lat'] as num).toDouble();
+                      final lng = (data['lng'] as num).toDouble();
+                      final poiLocation = LatLng(lat, lng);
 
-                    // ✅ CORRECCIÓN: Usar servicio de traducción con documento completo
-                    final translatedName = _translationService.poiNameFromDoc(data, lang);
-                    final imageUrl = (data['imageUrl'] ?? data['coverUrl'] ?? '').toString();
+                      final translatedName = _translationService.poiNameFromDoc(data, lang);
+                      final imageUrl = (data['imageUrl'] ?? data['coverUrl'] ?? '').toString();
+                      final displayName = translatedName.isEmpty ? doc.id : translatedName;
 
-                    // Fallback si no hay nombre traducido
-                    final displayName = translatedName.isEmpty ? doc.id : translatedName;
-
-                    markers.add(
-                      Marker(
-                        point: poiLocation,
-                        width: 60,
-                        height: 60,
-                        child: IconButton(
-                          icon: const Icon(Icons.location_on, size: 40, color: Colors.red),
-                          tooltip: displayName, // ✅ Tooltip traducido correctamente
-                          onPressed: () => _showPoiSheet(
-                            context,
-                            doc.id,    // ✅ Pasar ID del POI
-                            data,      // ✅ Pasar datos completos
-                            imageUrl,
-                            poiLocation,
+                      markers.add(
+                        Marker(
+                          point: poiLocation,
+                          width: 60,
+                          height: 60,
+                          child: IconButton(
+                            icon: const Icon(Icons.location_on, size: 40, color: Colors.red),
+                            tooltip: displayName,
+                            onPressed: () => _showPoiSheet(
+                              context,
+                              doc.id,
+                              data,
+                              imageUrl,
+                              poiLocation,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  } catch (_) {}
+                      );
+                    } catch (_) {}
+                  }
                 }
-              }
 
-              if (_currentLocation != null) {
-                markers.add(
-                  Marker(
-                    point: _currentLocation!,
-                    width: 40,
-                    height: 40,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                // ✅ Marcador de ubicación actual
+                if (_currentLocation != null) {
+                  markers.add(
+                    Marker(
+                      point: _currentLocation!,
+                      width: 40,
+                      height: 40,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.navigation, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  );
+                }
+
+                return FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _currentLocation ?? _center,
+                    initialZoom: 14,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}",
+                      additionalOptions: const {'accessToken': _mapboxToken},
+                      userAgentPackageName: 'com.torotoro.torotoro_app',
+                    ),
+                    if (_routePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _routePoints,
+                            color: Colors.blue,
+                            strokeWidth: 5.0,
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.navigation, color: Colors.white, size: 20),
-                    ),
-                  ),
+                    MarkerLayer(markers: markers),
+                  ],
                 );
-              }
+              },
+            ),
 
-              return FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _currentLocation ?? _center,
-                  initialZoom: 14,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}",
-                    additionalOptions: const {'accessToken': _mapboxToken},
-                    userAgentPackageName: 'com.torotoro.torotoro_app',
+            // ✅ Indicador de carga de ubicación
+            if (_isLoadingLocation)
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  if (_routePoints.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: _routePoints,
-                          color: Colors.blue,
-                          strokeWidth: 5.0,
-                        ),
-                      ],
-                    ),
-                  MarkerLayer(markers: markers),
-                ],
-              );
-            },
-          ),
-
-          if (_estimatedTime != null && _estimatedDistance != null)
-            Positioned(
-              bottom: 120,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.access_time, size: 18, color: Color(0xFF6B7C3F)),
-                    const SizedBox(width: 6),
-                    Text(_estimatedTime!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(width: 12),
-                    Container(width: 1, height: 16, color: Colors.grey[300]),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.straighten, size: 18, color: Color(0xFF6B7C3F)),
-                    const SizedBox(width: 6),
-                    Text(_estimatedDistance!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  ],
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Obteniendo ubicación...',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+            // ✅ Info de ruta
+            if (_estimatedTime != null && _estimatedDistance != null)
+              Positioned(
+                bottom: 120,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.access_time, size: 18, color: Color(0xFF6B7C3F)),
+                      const SizedBox(width: 6),
+                      Text(_estimatedTime!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(width: 12),
+                      Container(width: 1, height: 16, color: Colors.grey[300]),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.straighten, size: 18, color: Color(0xFF6B7C3F)),
+                      const SizedBox(width: 6),
+                      Text(_estimatedDistance!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ✅ Botón "Mi ubicación"
           if (_currentLocation != null)
             FloatingActionButton(
               heroTag: 'my_location',
@@ -306,6 +400,8 @@ class _MapPageState extends State<MapPage> {
               child: const Icon(Icons.my_location),
             ),
           const SizedBox(height: 10),
+          
+          // ✅ Botón para limpiar ruta
           if (_routePoints.isNotEmpty)
             FloatingActionButton(
               heroTag: 'clear_route',
@@ -326,15 +422,14 @@ class _MapPageState extends State<MapPage> {
 
   void _showPoiSheet(
     BuildContext context,
-    String poiId,                    // ✅ Cambio: Recibir ID en lugar de nombre traducido
-    Map<String, dynamic> data,       // ✅ Cambio: Recibir datos completos
+    String poiId,
+    Map<String, dynamic> data,
     String imageUrl,
     LatLng location,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final lang = _localeService.simpleLanguageCode;
 
-    // ✅ TRADUCIR AQUÍ (para que respete cambios de idioma)
     final translatedName = _translationService.poiNameFromDoc(data, lang);
     final translatedDesc = _translationService.poiDescFromDoc(data, lang);
     final displayName = translatedName.isEmpty ? poiId : translatedName;
@@ -387,7 +482,7 @@ class _MapPageState extends State<MapPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              displayName, // ✅ Usar nombre traducido
+                              displayName,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -412,7 +507,7 @@ class _MapPageState extends State<MapPage> {
                           if (_ttsService.isSpeaking) {
                             await _ttsService.stop();
                           } else {
-                            await _ttsService.speak(translatedDesc); // ✅ TTS con descripción traducida
+                            await _ttsService.speak(translatedDesc);
                           }
                           setModalState(() {});
                         },
@@ -452,7 +547,7 @@ class _MapPageState extends State<MapPage> {
                   Flexible(
                     child: SingleChildScrollView(
                       child: Text(
-                        translatedDesc, // ✅ Descripción traducida
+                        translatedDesc,
                         style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
                       ),
                     ),
