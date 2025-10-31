@@ -227,9 +227,8 @@ class HeroSection extends StatelessWidget {
     //    - Sube el APK y genera enlace público
     //    - Cambia ?dl=0 por ?dl=1 al final
     
-    // 🔥 URL de descarga de Firebase Storage
-    // TODO: Reemplaza con tu URL real de Firebase (copia desde Firebase Console)
-    const String apkDownloadUrl = "PEGA-TU-URL-AQUI";
+    // 🔥 URL de descarga del APK desde Firebase Storage
+    const String apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/proyecttorotoro.firebasestorage.app/o/downloads%2Fapp-release.apk?alt=media&token=acb0daf0-c5e5-4d06-97b9-b1423f0b7310";
     
     return Center(
       child: Container(

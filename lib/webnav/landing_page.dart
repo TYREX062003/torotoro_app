@@ -124,9 +124,9 @@ class LandingPage extends StatelessWidget {
                         description: 'Sistemas de cuevas espectaculares y únicas',
                       ),
                       _buildFeatureCard(
-                        icon: Icons.landscape_outlined,
-                        title: 'Rutas',
-                        description: 'Senderos guiados por paisajes increíbles',
+                        icon: Icons.cruelty_free,
+                        title: 'Animales',
+                        description: 'Animales nativos increíbles que habitan en Torotoro',
                       ),
                     ],
                   );
