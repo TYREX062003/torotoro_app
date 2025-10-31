@@ -18,6 +18,7 @@ import 'admin/admin_gate.dart';
 // 🆕 Páginas web
 import 'webnav/landing_page.dart';
 import 'webnav/web_login_page.dart';
+import 'webnav/web_explorar_page.dart'; // 🔥 NUEVA IMPORTACIÓN
 
 // L10n
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -150,6 +151,7 @@ class _TorotoroAppState extends State<TorotoroApp> {
         // 🆕 Rutas web
         '/web-login': (_) => const WebLoginPage(),
         '/web-landing': (_) => const LandingPage(),
+        '/web-explorar': (_) => const WebExplorarPage(), // 🔥 NUEVA RUTA
       },
     );
   }

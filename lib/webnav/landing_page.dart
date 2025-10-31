@@ -38,9 +38,6 @@ class LandingPage extends StatelessWidget {
                 _buildExploreSection(context),
                 
                 const SizedBox(height: 80),
-                
-                // 🔥 Footer
-                _buildFooter(context),
               ],
             ),
           ),
@@ -124,7 +121,7 @@ class LandingPage extends StatelessWidget {
                         description: 'Sistemas de cuevas espectaculares y únicas',
                       ),
                       _buildFeatureCard(
-                        icon: Icons.cruelty_free,
+                        icon: Icons.cruelty_free, // 🐰 Conejo como antes
                         title: 'Animales',
                         description: 'Animales nativos increíbles que habitan en Torotoro',
                       ),
@@ -182,50 +179,6 @@ class LandingPage extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  // ============================================
-  // FOOTER
-  // ============================================
-  Widget _buildFooter(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-      color: kBrown,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Column(
-            children: [
-              const Text(
-                'Parque Nacional Torotoro',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Descubre la historia natural de Bolivia',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(height: 30),
-              Text(
-                '© 2025 Torotoro App. Todos los derechos reservados.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

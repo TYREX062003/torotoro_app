@@ -19,7 +19,6 @@ class HeroSection extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 1200),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Responsive: stacked en mobile, row en desktop
               if (constraints.maxWidth < 900) {
                 return Column(
                   children: [
@@ -33,19 +32,9 @@ class HeroSection extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🔥 Izquierda: Texto + Botón
-                  Expanded(
-                    flex: 5,
-                    child: _buildLeftContent(context),
-                  ),
-                  
+                  Expanded(flex: 5, child: _buildLeftContent(context)),
                   const SizedBox(width: 80),
-                  
-                  // 🔥 Derecha: Ilustración con QR
-                  Expanded(
-                    flex: 5,
-                    child: _buildRightIllustration(),
-                  ),
+                  Expanded(flex: 5, child: _buildRightIllustration()),
                 ],
               );
             },
@@ -55,14 +44,10 @@ class HeroSection extends StatelessWidget {
     );
   }
 
-  // ============================================
-  // CONTENIDO IZQUIERDO
-  // ============================================
   Widget _buildLeftContent(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Título principal
         const Text(
           'Verificación\npor QR',
           style: TextStyle(
@@ -72,30 +57,21 @@ class HeroSection extends StatelessWidget {
             height: 1.2,
           ),
         ),
-        
         const SizedBox(height: 24),
-        
-        // Descripción
         Text(
           'Escanea el código QR para descargar la aplicación móvil de Torotoro y comenzar tu aventura explorando fósiles, cavernas y rutas increíbles.',
           style: TextStyle(
             fontSize: 18,
-            color: Colors.black.withValues(alpha: 0.8),
+            color: Colors.black.withOpacity(0.8),
             height: 1.6,
           ),
         ),
-        
         const SizedBox(height: 40),
         
-        // Botón "Explorar Ahora"
-        FilledButton(
+        // 🔥 BOTÓN ARREGLADO - Navega a /web-explorar
+        FilledButton.icon(
           onPressed: () {
-            // Scroll hacia la sección "Explorar"
-            Scrollable.ensureVisible(
-              context,
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeInOut,
-            );
+            Navigator.of(context).pushNamed('/web-explorar');
           },
           style: FilledButton.styleFrom(
             backgroundColor: kOlive,
@@ -104,7 +80,8 @@ class HeroSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          child: const Text(
+          icon: const Icon(Icons.explore, size: 22),
+          label: const Text(
             'Explorar Ahora',
             style: TextStyle(
               fontSize: 18,
@@ -116,22 +93,14 @@ class HeroSection extends StatelessWidget {
     );
   }
 
-  // ============================================
-  // ILUSTRACIÓN DERECHA (QR + Personas)
-  // ============================================
   Widget _buildRightIllustration() {
     return Container(
       constraints: const BoxConstraints(maxHeight: 500),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Fondo decorativo (formas orgánicas)
           ..._buildDecorativeShapes(),
-          
-          // QR Code (centro) - VERSIÓN CORREGIDA
           _buildQRCode(),
-          
-          // Personas ilustradas
           _buildIllustrations(),
         ],
       ),
@@ -140,7 +109,6 @@ class HeroSection extends StatelessWidget {
 
   List<Widget> _buildDecorativeShapes() {
     return [
-      // Círculos concéntricos de fondo
       Positioned(
         top: 80,
         right: 50,
@@ -150,7 +118,7 @@ class HeroSection extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: kOlive.withValues(alpha: 0.1),
+              color: kOlive.withOpacity(0.1),
               width: 30,
             ),
           ),
@@ -165,23 +133,21 @@ class HeroSection extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: kOlive.withValues(alpha: 0.05),
+              color: kOlive.withOpacity(0.05),
               width: 30,
             ),
           ),
         ),
       ),
-      
-      // Formas decorativas (hojas)
       Positioned(
         bottom: 80,
         left: 20,
-        child: _buildLeafShape(kOlive.withValues(alpha: 0.3)),
+        child: _buildLeafShape(kOlive.withOpacity(0.3)),
       ),
       Positioned(
         bottom: 50,
         left: 60,
-        child: _buildLeafShape(kOlive.withValues(alpha: 0.2)),
+        child: _buildLeafShape(kOlive.withOpacity(0.2)),
       ),
     ];
   }
@@ -202,32 +168,7 @@ class HeroSection extends StatelessWidget {
     );
   }
 
-  // ============================================
-  // QR CODE REAL - CON ENLACE AL APK
-  // ============================================
   Widget _buildQRCode() {
-    // 🔥 CONFIGURA TU URL DE DESCARGA AQUÍ
-    // Opciones para subir tu APK:
-    // 
-    // 1️⃣ Firebase Storage (Recomendado):
-    //    - Ve a Firebase Console → Storage
-    //    - Sube app-release.apk
-    //    - Obtén la URL pública
-    //    Ejemplo: "https://firebasestorage.googleapis.com/v0/b/tu-proyecto.appspot.com/o/torotoro-app.apk?alt=media&token=xxxxx"
-    //
-    // 2️⃣ Google Drive:
-    //    - Sube el APK y hazlo público
-    //    - Usa: "https://drive.google.com/uc?export=download&id=TU_FILE_ID"
-    //
-    // 3️⃣ GitHub Releases:
-    //    - Crea un release y adjunta el APK
-    //    - Copia la URL de descarga directa
-    //
-    // 4️⃣ Dropbox:
-    //    - Sube el APK y genera enlace público
-    //    - Cambia ?dl=0 por ?dl=1 al final
-    
-    // 🔥 URL de descarga del APK desde Firebase Storage
     const String apkDownloadUrl = "https://firebasestorage.googleapis.com/v0/b/proyecttorotoro.firebasestorage.app/o/downloads%2Fapp-release.apk?alt=media&token=acb0daf0-c5e5-4d06-97b9-b1423f0b7310";
     
     return Center(
@@ -240,7 +181,7 @@ class HeroSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 30,
               offset: const Offset(0, 10),
             ),
@@ -250,7 +191,6 @@ class HeroSection extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // QR Code real usando qr_flutter
             Flexible(
               child: Center(
                 child: QrImageView(
@@ -270,7 +210,7 @@ class HeroSection extends StatelessWidget {
               'Escanea para descargar',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.black.withValues(alpha: 0.6),
+                color: Colors.black.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -286,7 +226,6 @@ class HeroSection extends StatelessWidget {
   Widget _buildIllustrations() {
     return Stack(
       children: [
-        // Persona 1 (arriba, señalando)
         Positioned(
           top: 0,
           right: 80,
@@ -296,8 +235,6 @@ class HeroSection extends StatelessWidget {
             size: 80,
           ),
         ),
-        
-        // Persona 2 (abajo, con teléfono)
         Positioned(
           bottom: 0,
           right: 100,
@@ -307,8 +244,6 @@ class HeroSection extends StatelessWidget {
             size: 80,
           ),
         ),
-        
-        // Burbuja de chat
         Positioned(
           top: 40,
           right: 10,
@@ -346,7 +281,7 @@ class HeroSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
